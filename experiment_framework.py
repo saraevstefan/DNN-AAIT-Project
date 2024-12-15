@@ -648,7 +648,7 @@ def get_experiments(grid_search):
 
 if __name__ == "__main__":
     GRID_SEARCH = {
-        "max_train_epochs": [1],  # remove when running for real
+        "max_train_epochs": [20],  # remove when running for real
         "train_dataset_name": [
             "ro-sts",
             # "biblical_01", # comment biblical_01 because it is huuuge :D
@@ -664,15 +664,15 @@ if __name__ == "__main__":
     }
 
     # # auto - to run on a cluster
-    # EXPERIEMNTS = get_experiments(GRID_SEARCH)
+    EXPERIEMNTS = get_experiments(GRID_SEARCH)
 
     # manual - to run on local
-    EXPERIEMNTS = [
-        {
-            "max_train_epochs": 1,
-            "loss_function": "AnglE",
-        },
-    ]
+    # EXPERIEMNTS = [
+    #     {
+    #         "max_train_epochs": 1,
+    #         "loss_function": "AnglE",
+    #     },
+    # ]
 
     for i, experiment in enumerate(EXPERIEMNTS):
         experiment["experiment_id"] = i
