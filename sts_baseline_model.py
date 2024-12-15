@@ -10,6 +10,7 @@ from scipy.stats.stats import pearsonr
 from scipy.stats import spearmanr
 
 from pytorch_lightning.callbacks import ModelCheckpoint
+from datasets import load_dataset
 
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -34,9 +35,9 @@ class TransformerModel (pl.LightningModule):
         self.train_y_hat = []
         self.train_y = []
         self.train_loss = []
-        self.valid_y_hat = []
-        self.valid_y = []
-        self.valid_loss = []
+        self.dev_y_hat = []
+        self.dev_y = []
+        self.dev_loss = []
         self.test_y_hat = []
         self.test_y = []
         self.test_loss = []
@@ -90,7 +91,7 @@ class TransformerModel (pl.LightningModule):
 
         return {"loss": loss}
 
-    def training_epoch_end(self, outputs):
+    def on_training_epoch_end(self):
         pearson_score = pearsonr(self.train_y, self.train_y_hat)[0]
         spearman_score = spearmanr(self.train_y, self.train_y_hat)[0]
         mean_train_loss = sum(self.train_loss)/len(self.train_loss)
@@ -108,25 +109,25 @@ class TransformerModel (pl.LightningModule):
         
         loss, predicted_sims = self(s1, s2, sim)
 
-        self.valid_y_hat.extend(predicted_sims.detach().cpu().view(-1).numpy())
-        self.valid_y.extend(sim.detach().cpu().view(-1).numpy())
-        self.valid_loss.append(loss.detach().cpu().numpy())
+        self.dev_y_hat.extend(predicted_sims.detach().cpu().view(-1).numpy())
+        self.dev_y.extend(sim.detach().cpu().view(-1).numpy())
+        self.dev_loss.append(loss.detach().cpu().numpy())
 
         return {"loss": loss}
 
 
-    def validation_epoch_end(self, outputs):
-        pearson_score = pearsonr(self.valid_y, self.valid_y_hat)[0]
-        spearman_score = spearmanr(self.valid_y, self.valid_y_hat)[0]
-        mean_val_loss = sum(self.valid_loss)/len(self.valid_loss)
+    def on_validation_epoch_end(self):
+        pearson_score = pearsonr(self.dev_y, self.dev_y_hat)[0]
+        spearman_score = spearmanr(self.dev_y, self.dev_y_hat)[0]
+        mean_dev_loss = sum(self.dev_loss)/len(self.dev_loss)
         
-        self.log("valid/avg_loss", mean_val_loss, prog_bar=True)
-        self.log("valid/pearson", pearson_score, prog_bar=True)
-        self.log("valid/spearman", spearman_score, prog_bar=True)
+        self.log("dev/avg_loss", mean_dev_loss, prog_bar=True)
+        self.log("dev/pearson", pearson_score, prog_bar=True)
+        self.log("dev/spearman", spearman_score, prog_bar=True)
 
-        self.valid_y_hat = []
-        self.valid_y = []
-        self.valid_loss = []
+        self.dev_y_hat = []
+        self.dev_y = []
+        self.dev_loss = []
 
 
     def test_step(self, batch, batch_idx):
@@ -141,7 +142,7 @@ class TransformerModel (pl.LightningModule):
         return {"loss": loss}
 
 
-    def test_epoch_end(self, outputs):
+    def on_test_epoch_end(self):
         pearson_score = pearsonr(self.test_y, self.test_y_hat)[0]
         spearman_score = spearmanr(self.test_y, self.test_y_hat)[0]
         mean_test_loss = sum(self.test_loss)/len(self.test_loss)
@@ -159,31 +160,14 @@ class TransformerModel (pl.LightningModule):
 
 
 class MyDataset(Dataset):
-    def __init__(self, tokenizer, file_path: str):
-        self.file_path = file_path
-        self.instances = []
-        print("Reading corpus: {}".format(file_path))
-
-        # checks
-        assert os.path.isfile(file_path)
-        with open(file_path, "r", encoding="utf8") as f:
-            lines = f.readlines()
-        for line in lines:
-            if line.strip()=="":
-                break
-            parts = line.strip().split("\t")
-            if len(parts) != 3:
-                print(".")
-                continue
-            sim = parts[0]
-            sentence1 = parts[1]
-            sentence2 = parts[2]
-            instance = {
-                "sentence1": sentence1,
-                "sentence2": sentence2,
-                "sim": float(sim)/5.
-            }
-            self.instances.append(instance)
+    # init this class with command "MyDataset(tokenizer, ro_sts_dataset.get_data("train"))"
+    def __init__(self, tokenizer, data):
+        data_dict = data.to_dict("records")
+        self.instances = [{
+                "sentence1": entry["text1"],
+                "sentence2": entry["text2"],
+                "sim": entry["score"]
+            } for entry in data_dict]
 
     def __len__(self):
         return len(self.instances)
@@ -238,18 +222,19 @@ if __name__ == "__main__":
     
     model = TransformerModel(model_name=args.model_name, lr=args.lr, model_max_length=args.model_max_length) # need to load for tokenizer
     
-    print("Loading data...") 
-    train_dataset = MyDataset(tokenizer=model.tokenizer, file_path="../dataset/text-similarity/RO-STS.train.tsv")
-    val_dataset = MyDataset(tokenizer=model.tokenizer, file_path="../dataset/text-similarity/RO-STS.dev.tsv")
-    test_dataset = MyDataset(tokenizer=model.tokenizer, file_path="../dataset/text-similarity/RO-STS.test.tsv")
+    print("Loading data...")
+    dataset = load_dataset("ro-sts")
+    train_dataset = MyDataset(tokenizer=model.tokenizer, data=dataset.get_data("train"))
+    dev_dataset = MyDataset(tokenizer=model.tokenizer, data=dataset.get_data("dev"))
+    test_dataset = MyDataset(tokenizer=model.tokenizer, data=dataset.get_data("test"))
 
     train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=4, shuffle=True, collate_fn=my_collate, pin_memory=True)
-    val_dataloader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False, collate_fn=my_collate, pin_memory=True)
+    dev_dataloader = DataLoader(dev_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False, collate_fn=my_collate, pin_memory=True)
     test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, num_workers=4, shuffle=False, collate_fn=my_collate, pin_memory=True)
 
 
     print("Train dataset has {} instances.".format(len(train_dataset)))
-    print("Valid dataset has {} instances.".format(len(val_dataset)))
+    print("Dev dataset has {} instances.".format(len(dev_dataset)))
     print("Test dataset has {} instances.\n".format(len(test_dataset)))
 
     itt = 0
@@ -266,24 +251,25 @@ if __name__ == "__main__":
         model = TransformerModel(model_name=args.model_name, lr=args.lr, model_max_length=args.model_max_length)
         
         early_stop = EarlyStopping(
-            monitor='valid/pearson',
+            monitor='dev/pearson',
             patience=4,
             verbose=True,
             mode='max'
         )
         
         trainer = pl.Trainer(
-            gpus=args.gpus,
+            devices=args.gpus,
             callbacks=[early_stop],
             #limit_train_batches=5,
             #limit_val_batches=2,
             accumulate_grad_batches=args.accumulate_grad_batches,
             gradient_clip_val=1.0,
-            enable_checkpointing=False
+            enable_checkpointing=False,
+            max_epochs=1, # 10
         )
-        trainer.fit(model, train_dataloader, val_dataloader)
+        trainer.fit(model, train_dataloader, dev_dataloader)
 
-        resultd = trainer.test(model, val_dataloader)
+        resultd = trainer.test(model, dev_dataloader)
         result = trainer.test(model, test_dataloader)
 
         with open("results_{}_of_{}.json".format(itt+1, args.experiment_iterations),"w") as f:
@@ -301,9 +287,9 @@ if __name__ == "__main__":
 
     print("Done, writing results...")
     result = {}
-    result["valid_pearson"] = sum(v_p)/args.experiment_iterations
-    result["valid_spearman"] = sum(v_s)/args.experiment_iterations
-    result["valid_loss"] = sum(v_l)/args.experiment_iterations
+    result["dev_pearson"] = sum(v_p)/args.experiment_iterations
+    result["dev_spearman"] = sum(v_s)/args.experiment_iterations
+    result["dev_loss"] = sum(v_l)/args.experiment_iterations
     result["test_pearson"] = sum(t_p)/args.experiment_iterations
     result["test_spearman"] = sum(t_s)/args.experiment_iterations
     result["test_loss"] = sum(t_l)/args.experiment_iterations

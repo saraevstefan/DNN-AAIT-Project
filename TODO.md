@@ -1,4 +1,7 @@
-Run the baseline model on the ro-sts dataset -- we need to see that everything works
+Baseline results: 
+test/pearson    0.8159
+test/spearman   0.8086
+
 
 AnglE - use this loss -- or method from this paper to train STS
 
