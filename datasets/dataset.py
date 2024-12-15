@@ -26,7 +26,7 @@ class Dataset:
         """
         raise NotImplementedError("preprocess() must be implemented by subclasses.")
 
-    def get_data(self):
+    def get_data(self, split):
         """
         Return the data for training/testing.
         """
@@ -54,3 +54,17 @@ class Dataset:
         test = pd.concat([test, rare_data])
 
         return train, test
+
+
+class DatasetAggregator(Dataset):
+    def __init__(self, datasets):
+        self.__datasets = datasets
+
+    def _load_data(self):
+        return
+
+    def _preprocess(self):
+        return
+
+    def get_data(self, split):
+        return pd.concat([dataset.get_data(split) for dataset in self.__datasets])
