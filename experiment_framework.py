@@ -463,7 +463,7 @@ def translate_to_random_language_and_back(lst_text):
         return lst_text
 
 
-def my_collate(args, model, batch):
+def my_collate(model, batch, translate=False):
     # batch is a list of batch_size number of instances; each instance is a dict, as given by MyDataset.__getitem__()
     # return is a sentence1_batch, sentence2_batch, sims
     # the first two return values are dynamic batching for sentences 1 and 2, and [bs] is the sims for each of them
@@ -486,9 +486,11 @@ def my_collate(args, model, batch):
         sentence2_batch.append(instance["sentence2"])
         sims.append(instance["sim"])
 
-    if args.data_augmentation_translate_data:
-        sentence1_batch = translate_to_random_language_and_back(sentence1_batch)
-        sentence2_batch = translate_to_random_language_and_back(sentence2_batch)
+    if translate:
+        if random.random() < 0.5:
+            sentence1_batch = translate_to_random_language_and_back(sentence1_batch)
+        else:
+            sentence2_batch = translate_to_random_language_and_back(sentence2_batch)
 
     sentence1_batch = model.tokenizer(
         sentence1_batch,
@@ -540,7 +542,7 @@ def prepare_data(args, model, datasets):
         batch_size=args.batch_size,
         num_workers=4,
         shuffle=True,
-        collate_fn=(lambda batch: my_collate(args, model, batch)),
+        collate_fn=(lambda batch: my_collate(model, batch, translate=args.data_augmentation_translate_data)),
         pin_memory=True,
     )
     dev_dataloader = DataLoader(
@@ -548,7 +550,7 @@ def prepare_data(args, model, datasets):
         batch_size=args.batch_size,
         num_workers=4,
         shuffle=False,
-        collate_fn=(lambda batch: my_collate(args, model, batch)),
+        collate_fn=(lambda batch: my_collate(model, batch)),
         pin_memory=True,
     )
     test_dataloader = DataLoader(
