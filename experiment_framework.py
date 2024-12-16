@@ -686,28 +686,28 @@ if __name__ == "__main__":
         #     # "biblical_01", # comment biblical_01 because it is huuuge :D
         #     # ["ro-sts", "biblical_01"],
         # ],
-        "accumulate_grad_batches": [32],
+        "accumulate_grad_batches": [16],
         "model_name": [
-            "dumitrescustefan/bert-base-romanian-cased-v1",
+            # "dumitrescustefan/bert-base-romanian-cased-v1",
             "dumitrescustefan/bert-base-romanian-uncased-v1",
-            "readerbench/RoBERT-small",
+            # "readerbench/RoBERT-small",
             "readerbench/RoBERT-base",
         ],
         "loss_function": ["MSE", "AnglE"],
-        "data_augmentation_translate_data": [False, True],
+        "data_augmentation_translate_data": [True],
     }
 
     # # auto - to run on a cluster
     EXPERIEMNTS = get_experiments(GRID_SEARCH)
 
     # manual - to run on local
-    EXPERIEMNTS = [
-        {
-            "max_train_epochs": 1,
-            "loss_function": "AnglE",
-            "data_augmentation_translate_data": True,
-        },
-    ]
+    # EXPERIEMNTS = [
+    #     {
+    #         "max_train_epochs": 1,
+    #         "loss_function": "AnglE",
+    #         "data_augmentation_translate_data": True,
+    #     },
+    # ]
 
     for i, experiment in enumerate(EXPERIEMNTS):
         experiment["experiment_id"] = i
