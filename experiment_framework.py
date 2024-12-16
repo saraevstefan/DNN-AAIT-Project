@@ -1,11 +1,13 @@
 import json
 import os
+import random
 from pprint import pprint
 
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from googletrans import Translator
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from scipy.stats import spearmanr
 from scipy.stats.stats import pearsonr
@@ -17,6 +19,7 @@ from transformers import AutoConfig, AutoModel, AutoTokenizer
 from datasets import load_dataset
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+translator = Translator()
 
 
 class AnglELoss(nn.Module):
@@ -438,7 +441,29 @@ class MyDataset(Dataset):
         return self.instances[i]  # torch.tensor([0], dtype=torch.long)
 
 
-def my_collate(model, batch):
+def translate_to_random_language_and_back(lst_text):
+    languages = ["en", "fr", "de", "es", "it"]
+    try:
+        # Randomly select a target language
+        target_language = random.choice(languages)
+        # Translate to the selected language
+        translated = [
+            res.text
+            for res in translator.translate(lst_text, src="ro", dest=target_language)
+        ]
+        # Translate back to Romanian
+        back_translated = [
+            res.text
+            for res in translator.translate(translated, src=target_language, dest="ro")
+        ]
+        return back_translated
+    except Exception as e:
+        print(f"Translation error: {e}")
+        # Return the original text if translation fails
+        return lst_text
+
+
+def my_collate(args, model, batch):
     # batch is a list of batch_size number of instances; each instance is a dict, as given by MyDataset.__getitem__()
     # return is a sentence1_batch, sentence2_batch, sims
     # the first two return values are dynamic batching for sentences 1 and 2, and [bs] is the sims for each of them
@@ -460,6 +485,10 @@ def my_collate(model, batch):
         sentence1_batch.append(instance["sentence1"])
         sentence2_batch.append(instance["sentence2"])
         sims.append(instance["sim"])
+
+    if args.data_augmentation_translate_data:
+        sentence1_batch = translate_to_random_language_and_back(sentence1_batch)
+        sentence2_batch = translate_to_random_language_and_back(sentence2_batch)
 
     sentence1_batch = model.tokenizer(
         sentence1_batch,
@@ -511,7 +540,7 @@ def prepare_data(args, model, datasets):
         batch_size=args.batch_size,
         num_workers=4,
         shuffle=True,
-        collate_fn=(lambda batch: my_collate(model, batch)),
+        collate_fn=(lambda batch: my_collate(args, model, batch)),
         pin_memory=True,
     )
     dev_dataloader = DataLoader(
@@ -519,7 +548,7 @@ def prepare_data(args, model, datasets):
         batch_size=args.batch_size,
         num_workers=4,
         shuffle=False,
-        collate_fn=(lambda batch: my_collate(model, batch)),
+        collate_fn=(lambda batch: my_collate(args, model, batch)),
         pin_memory=True,
     )
     test_dataloader = DataLoader(
@@ -625,6 +654,7 @@ class Configuration:
     model_name: str = "dumitrescustefan/bert-base-romanian-cased-v1"
     train_dataset_name: str = "ro-sts"
     test_dataset_name: str = "ro-sts"
+    data_augmentation_translate_data: bool = False
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -648,12 +678,13 @@ def get_experiments(grid_search):
 
 if __name__ == "__main__":
     GRID_SEARCH = {
-        "max_train_epochs": [20],  # remove when running for real
-        "train_dataset_name": [
-            "ro-sts",
-            # "biblical_01", # comment biblical_01 because it is huuuge :D
-            # ["ro-sts", "biblical_01"],
-        ],
+        # "max_train_epochs": [20],  # remove when running for real
+        # "train_dataset_name": [
+        #     "ro-sts",
+        #     # "biblical_01", # comment biblical_01 because it is huuuge :D
+        #     # ["ro-sts", "biblical_01"],
+        # ],
+        "accumulate_grad_batches": [32],
         "model_name": [
             "dumitrescustefan/bert-base-romanian-cased-v1",
             "dumitrescustefan/bert-base-romanian-uncased-v1",
@@ -661,18 +692,20 @@ if __name__ == "__main__":
             "readerbench/RoBERT-base",
         ],
         "loss_function": ["MSE", "AnglE"],
+        "data_augmentation_translate_data": [False, True],
     }
 
     # # auto - to run on a cluster
     EXPERIEMNTS = get_experiments(GRID_SEARCH)
 
     # manual - to run on local
-    # EXPERIEMNTS = [
-    #     {
-    #         "max_train_epochs": 1,
-    #         "loss_function": "AnglE",
-    #     },
-    # ]
+    EXPERIEMNTS = [
+        {
+            "max_train_epochs": 1,
+            "loss_function": "AnglE",
+            "data_augmentation_translate_data": True,
+        },
+    ]
 
     for i, experiment in enumerate(EXPERIEMNTS):
         experiment["experiment_id"] = i

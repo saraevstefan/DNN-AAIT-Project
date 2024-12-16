@@ -17,7 +17,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 class TransformerModel (pl.LightningModule):
-    def __init__(self, model_name="dumitrescustefan/bert-base-romanian-cased-v1", lr=2e-05, model_max_length=512):
+    def __init__(self, model_name="dumitrescustefan/bert-base-romanian-uncased-v1", lr=2e-05, model_max_length=512):
         super().__init__()
         print("Loading AutoModel [{}]...".format(model_name))
         self.model_name = model_name
@@ -265,7 +265,7 @@ if __name__ == "__main__":
             accumulate_grad_batches=args.accumulate_grad_batches,
             gradient_clip_val=1.0,
             enable_checkpointing=False,
-            max_epochs=1, # 10
+            max_epochs=20,
         )
         trainer.fit(model, train_dataloader, dev_dataloader)
 
