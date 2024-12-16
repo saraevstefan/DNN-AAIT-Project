@@ -578,7 +578,7 @@ def train_model(args, model, dataloaders, hyperparameters):
     t_p = []
     t_s = []
     t_l = []
-    print("Running experiment {}".format(args.experiment_id))
+    print("Running experiment with hyperparams ".format(hyperparameters))
 
     early_stop = EarlyStopping(
         monitor="dev/pearson", patience=4, verbose=True, mode="max"
@@ -701,14 +701,13 @@ if __name__ == "__main__":
     EXPERIEMNTS = get_experiments(GRID_SEARCH)
 
     # manual - to run on local
-    # EXPERIEMNTS = [
-    #     {
-    #         "max_train_epochs": 1,
-    #         "loss_function": "AnglE",
-    #         "data_augmentation_translate_data": True,
-    #     },
-    # ]
+    EXPERIEMNTS = [
+        {
+            "model_name": "readerbench/RoBERT-base",
+            "loss_function": "AnglE",
+            "data_augmentation_translate_data": True,
+        },
+    ]
 
     for i, experiment in enumerate(EXPERIEMNTS):
-        experiment["experiment_id"] = i
         run_experiment(experiment)

@@ -1,0 +1,5 @@
+accumulate_grad_batches: 16
+data_augmentation_translate_data: true
+experiment_id: 0
+loss_function: MSE
+model_name: dumitrescustefan/bert-base-romanian-uncased-v1

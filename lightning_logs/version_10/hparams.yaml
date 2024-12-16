@@ -1,0 +1,5 @@
+accumulate_grad_batches: 16
+data_augmentation_translate_data: true
+experiment_id: 2
+loss_function: MSE
+model_name: readerbench/RoBERT-base
