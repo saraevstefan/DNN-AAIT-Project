@@ -1,0 +1,5 @@
+experiment_id: 7
+loss_function: AnglE
+max_train_epochs: 20
+model_name: readerbench/RoBERT-base
+train_dataset_name: ro-sts

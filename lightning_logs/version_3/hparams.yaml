@@ -1,0 +1,5 @@
+experiment_id: 3
+loss_function: AnglE
+max_train_epochs: 20
+model_name: dumitrescustefan/bert-base-romanian-uncased-v1
+train_dataset_name: ro-sts
