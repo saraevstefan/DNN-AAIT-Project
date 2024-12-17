@@ -697,7 +697,7 @@ if __name__ == "__main__":
         "data_augmentation_translate_data": [True],
     }
 
-    # # auto - to run on a cluster
+    # auto - to run on a cluster
     EXPERIEMNTS = get_experiments(GRID_SEARCH)
 
     # manual - to run on local
