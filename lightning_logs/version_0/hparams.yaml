@@ -1,5 +1,3 @@
-experiment_id: 0
+data_augmentation_translate_data: false
 loss_function: MSE
-max_train_epochs: 20
 model_name: dumitrescustefan/bert-base-romanian-cased-v1
-train_dataset_name: ro-sts

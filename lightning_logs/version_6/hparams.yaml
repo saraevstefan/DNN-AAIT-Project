@@ -1,5 +1,3 @@
-experiment_id: 6
+data_augmentation_translate_data: false
 loss_function: MSE
-max_train_epochs: 20
 model_name: readerbench/RoBERT-base
-train_dataset_name: ro-sts
