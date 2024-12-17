@@ -193,18 +193,36 @@ if __name__ == "__main__":
 
     print("Plotting evolution of metrics during training for all experiments with loss=MSE and no data augmentation")
     plot_curves([0,2,4,6], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
+    # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
+    # with loss_function=MSE of desired cosine similarity and predicted cosine similarity
+
 
     print("Plotting evolution of metrics during training for all experiments with loss=AnglE and no data augmentation")
     plot_curves([1,3,5,7], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
+    # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
+    # with loss_function=AnglE
 
     print("Plotting evolution of metrics during training for all experiments with the same model name and no data augmentation")
     plot_curves([0,1], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
     plot_curves([2,3], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
     plot_curves([4,5], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
     plot_curves([6,7], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
+    # We observe that AnglE loss is better for the bert-uncased backbone, but worse for the RoBERT-base.
+    # AnglE loss does not impact the training, suggesting that we can get significant improvements if we focus on data
 
     print("Plotting evolution of metrics during training for all experiments with the same model name and loss")
     plot_curves([2,8], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
     plot_curves([3,9], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
     plot_curves([6,10], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
     plot_curves([7,11], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
+    # We observe that data augmentation greatly improves performance of the model on the dev set, regardless
+    # of the model used or the loss function used
+    
+    print("Plotting evolution of metrics during training for all experiments with the same model name and with data augmentation")
+    plot_curves([8,9], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
+    plot_curves([10,11], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
+    # We observe that with data augmentation, the AnglE loss function performs slightly better than MSE loss.
+
+    # Other than that, we believe we can achieve better performances by focusing on improving the training data.
+
+    # We plan in the next set of experiments to use the biblical dataset during training.
