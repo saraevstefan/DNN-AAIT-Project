@@ -1,18 +1,9 @@
-import json
-import os
-import random
-from pprint import pprint
-
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from googletrans import Translator
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from scipy.stats import spearmanr
 from scipy.stats.stats import pearsonr
-from torch.nn import MSELoss
-from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
 from transformers import AutoConfig, AutoModel, AutoTokenizer
 

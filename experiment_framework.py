@@ -8,11 +8,13 @@ import torch
 from googletrans import Translator
 from pytorch_lightning.callbacks import EarlyStopping
 from torch.utils.data import DataLoader
-from architecture import TransformerModel, MyDataset
+
+from architecture import MyDataset, TransformerModel
 from datasets import load_dataset
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 translator = Translator()
+
 
 def translate_to_random_language_and_back(lst_text):
     languages = ["en", "fr", "de", "es", "it"]
@@ -115,7 +117,11 @@ def prepare_data(args, model, datasets):
         batch_size=args.batch_size,
         num_workers=4,
         shuffle=True,
-        collate_fn=(lambda batch: my_collate(model, batch, translate=args.data_augmentation_translate_data)),
+        collate_fn=(
+            lambda batch: my_collate(
+                model, batch, translate=args.data_augmentation_translate_data
+            )
+        ),
         pin_memory=True,
     )
     dev_dataloader = DataLoader(
@@ -197,6 +203,21 @@ def train_model(args, model, dataloaders, hyperparameters):
     return result
 
 
+def get_experiments(grid_search):
+    from itertools import product
+
+    # Extract keys and values
+    keys = grid_search.keys()
+    values = grid_search.values()
+
+    # Generate all combinations of parameters
+    combinations = list(product(*values))
+
+    # Convert combinations into list of experiment configurations
+    experiments = [dict(zip(keys, combination)) for combination in combinations]
+    return experiments
+
+
 def run_experiment(experiment_config):
     args = Configuration(**experiment_config)
     print(
@@ -234,21 +255,6 @@ class Configuration:
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             self.__setattr__(key, value)
-
-
-def get_experiments(grid_search):
-    from itertools import product
-
-    # Extract keys and values
-    keys = grid_search.keys()
-    values = grid_search.values()
-
-    # Generate all combinations of parameters
-    combinations = list(product(*values))
-
-    # Convert combinations into list of experiment configurations
-    experiments = [dict(zip(keys, combination)) for combination in combinations]
-    return experiments
 
 
 if __name__ == "__main__":
