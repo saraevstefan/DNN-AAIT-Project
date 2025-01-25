@@ -171,7 +171,7 @@ def train_model(args, model, dataloaders, hyperparameters):
         callbacks=[early_stop, checkpoint_callback],
         accumulate_grad_batches=args.accumulate_grad_batches,
         gradient_clip_val=1.0,
-        enable_checkpointing=False,
+        enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
     )
 
