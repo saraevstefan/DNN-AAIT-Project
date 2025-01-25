@@ -159,7 +159,7 @@ def train_model(args, model, dataloaders, hyperparameters):
         mode="max",
         save_top_k=1,
         dirpath="checkpoints/",
-        filename="best_model"
+        filename="best_model",
     )
 
     early_stop = EarlyStopping(
@@ -181,8 +181,13 @@ def train_model(args, model, dataloaders, hyperparameters):
     # Load the best model based on dev/pearson score
     best_model_path = checkpoint_callback.best_model_path
     if best_model_path:
-        model.load_from_checkpoint(best_model_path)
-    
+        model = TransformerModel.load_from_checkpoint(
+            best_model_path,
+            model_name=args.model_name,
+            lr=args.lr,
+            model_max_length=args.model_max_length,
+        )
+
     result_dev = trainer.test(model, dev_dataloader)
     result_test = trainer.test(model, test_dataloader)
 
@@ -205,6 +210,7 @@ def train_model(args, model, dataloaders, hyperparameters):
         json.dump(result, f, indent=4, sort_keys=True)
 
     return result
+
 
 def get_experiments(grid_search):
     from itertools import product
@@ -266,7 +272,7 @@ if __name__ == "__main__":
         # "max_train_epochs": [20],  # remove when running for real
         "train_dataset_name": [
             # "ro-sts",
-            "biblical_01", # comment biblical_01 because it is huuuge :D
+            "biblical_01",  # comment biblical_01 because it is huuuge :D
             ["ro-sts", "biblical_01"],
         ],
         "accumulate_grad_batches": [16],
