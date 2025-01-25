@@ -197,12 +197,12 @@ def train_model(args, model, dataloaders, hyperparameters):
 
     print("Done, writing results...")
     result = {
-        "dev_pearson": result_dev["test/pearson"],
-        "dev_spearman": result_dev["test/spearman"],
-        "dev_loss": result_dev["test/avg_loss"],
-        "test_pearson": result_test["test/pearson"],
-        "test_spearman": result_test["test/spearman"],
-        "test_loss": result_test["test/avg_loss"],
+        "dev_pearson": result_dev[0]["test/pearson"],
+        "dev_spearman": result_dev[0]["test/spearman"],
+        "dev_loss": result_dev[0]["test/avg_loss"],
+        "test_pearson": result_test[0]["test/pearson"],
+        "test_spearman": result_test[0]["test/spearman"],
+        "test_loss": result_test[0]["test/avg_loss"],
     }
 
     results_location = os.path.join(trainer.logger.log_dir, "results.json")
