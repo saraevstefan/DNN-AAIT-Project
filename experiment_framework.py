@@ -6,7 +6,7 @@ from pprint import pprint
 import pytorch_lightning as pl
 import torch
 from googletrans import Translator
-from pytorch_lightning.callbacks import EarlyStopping
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from torch.utils.data import DataLoader
 
 from architecture import MyDataset, TransformerModel
@@ -152,13 +152,15 @@ def prepare_data(args, model, datasets):
 def train_model(args, model, dataloaders, hyperparameters):
     train_dataloader, dev_dataloader, test_dataloader = dataloaders
 
-    d_p = []
-    d_s = []
-    d_l = []
-    t_p = []
-    t_s = []
-    t_l = []
-    print("Running experiment with hyperparams ".format(hyperparameters))
+    print(f"Running experiment with hyperparams {hyperparameters}")
+
+    checkpoint_callback = ModelCheckpoint(
+        monitor="dev/pearson",
+        mode="max",
+        save_top_k=1,
+        dirpath="checkpoints/",
+        filename="best_model"
+    )
 
     early_stop = EarlyStopping(
         monitor="dev/pearson", patience=4, verbose=True, mode="max"
@@ -166,43 +168,43 @@ def train_model(args, model, dataloaders, hyperparameters):
 
     trainer = pl.Trainer(
         devices=args.gpus,
-        callbacks=[early_stop],
-        # limit_train_batches=5,
-        # limit_val_batches=2,
+        callbacks=[early_stop, checkpoint_callback],
         accumulate_grad_batches=args.accumulate_grad_batches,
         gradient_clip_val=1.0,
         enable_checkpointing=False,
         max_epochs=args.max_train_epochs,
     )
+
     trainer.logger.log_hyperparams(hyperparameters)
     trainer.fit(model, train_dataloader, dev_dataloader)
 
+    # Load the best model based on dev/pearson score
+    best_model_path = checkpoint_callback.best_model_path
+    if best_model_path:
+        model.load_from_checkpoint(best_model_path)
+    
     result_dev = trainer.test(model, dev_dataloader)
     result_test = trainer.test(model, test_dataloader)
 
-    d_p.append(result_dev[0]["test/pearson"])
-    d_s.append(result_dev[0]["test/spearman"])
-    d_l.append(result_dev[0]["test/avg_loss"])
-    t_p.append(result_test[0]["test/pearson"])
-    t_s.append(result_test[0]["test/spearman"])
-    t_l.append(result_test[0]["test/avg_loss"])
+    # Remove checkpoint after evaluation
+    if best_model_path and os.path.exists(best_model_path):
+        os.remove(best_model_path)
 
     print("Done, writing results...")
-    result = {}
-    result["dev_pearson"] = sum(d_p)
-    result["dev_spearman"] = sum(d_s)
-    result["dev_loss"] = sum(d_l)
-    result["test_pearson"] = sum(t_p)
-    result["test_spearman"] = sum(t_s)
-    result["test_loss"] = sum(t_l)
+    result = {
+        "dev_pearson": result_dev["test/pearson"],
+        "dev_spearman": result_dev["test/spearman"],
+        "dev_loss": result_dev["test/avg_loss"],
+        "test_pearson": result_test["test/pearson"],
+        "test_spearman": result_test["test/spearman"],
+        "test_loss": result_test["test/avg_loss"],
+    }
 
     results_location = os.path.join(trainer.logger.log_dir, "results.json")
-
     with open(results_location, "w") as f:
         json.dump(result, f, indent=4, sort_keys=True)
 
     return result
-
 
 def get_experiments(grid_search):
     from itertools import product
