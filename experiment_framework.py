@@ -100,10 +100,11 @@ def prepare_model(args):
 
 def load_data(args):
     raw_train_dataset = load_dataset(args.train_dataset_name)
+    raw_dev_dataset = load_dataset(args.dev_dataset_name)
     raw_test_dataset = load_dataset(args.test_dataset_name)
 
     train_dataset = MyDataset(data=raw_train_dataset.get_data("train"))
-    dev_dataset = MyDataset(data=raw_train_dataset.get_data("dev"))
+    dev_dataset = MyDataset(data=raw_dev_dataset.get_data("dev"))
     test_dataset = MyDataset(data=raw_test_dataset.get_data("test"))
 
     return train_dataset, dev_dataset, test_dataset
@@ -249,6 +250,7 @@ class Configuration:
     max_train_epochs: int = 20
     model_name: str = "dumitrescustefan/bert-base-romanian-cased-v1"
     train_dataset_name: str = "ro-sts"
+    dev_dataset_name: str = "ro-sts"
     test_dataset_name: str = "ro-sts"
     data_augmentation_translate_data: bool = False
 
@@ -260,11 +262,11 @@ class Configuration:
 if __name__ == "__main__":
     GRID_SEARCH = {
         # "max_train_epochs": [20],  # remove when running for real
-        # "train_dataset_name": [
-        #     "ro-sts",
-        #     # "biblical_01", # comment biblical_01 because it is huuuge :D
-        #     # ["ro-sts", "biblical_01"],
-        # ],
+        "train_dataset_name": [
+            # "ro-sts",
+            "biblical_01", # comment biblical_01 because it is huuuge :D
+            ["ro-sts", "biblical_01"],
+        ],
         "accumulate_grad_batches": [16],
         "model_name": [
             # "dumitrescustefan/bert-base-romanian-cased-v1",
