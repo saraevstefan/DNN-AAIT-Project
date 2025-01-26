@@ -7,6 +7,7 @@ import pytorch_lightning as pl
 import torch
 from googletrans import Translator
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
 from torch.utils.data import DataLoader
 
 from architecture import MyDataset, TransformerModel
@@ -152,6 +153,9 @@ def prepare_data(args, model, datasets):
 def train_model(args, model, dataloaders, hyperparameters):
     train_dataloader, dev_dataloader, test_dataloader = dataloaders
 
+    # Create two loggers: TensorBoard + CSV
+    tb_logger = TensorBoardLogger("lightning_logs", name=None)  
+    csv_logger = CSVLogger(save_dir="lightning_logs", name="my_csv_logs")
     print(f"Running experiment with hyperparams {hyperparameters}")
 
     checkpoint_callback = ModelCheckpoint(
@@ -173,6 +177,7 @@ def train_model(args, model, dataloaders, hyperparameters):
         gradient_clip_val=1.0,
         enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
+        logger=[tb_logger, csv_logger],  # Use multiple loggers
     )
 
     trainer.logger.log_hyperparams(hyperparameters)
