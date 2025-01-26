@@ -89,6 +89,31 @@ Experiment 11
     "model_name": "readerbench/RoBERT-base"
 }
 
+Experiment 12
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": "biblical_01"
+}
+
+Experiment 13
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": "ro-sts"
+}
+
+Experiment 14
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": ["ro-sts", "biblical_01"]
+}
 """
 
 
@@ -99,30 +124,33 @@ def read_results(experiment_folder):
     with open(os.path.join(experiment_folder, "hparams.yaml"), "r") as fd:
         hyperparams = yaml.safe_load(fd)
 
-    results = []
-    with open(os.path.join(experiment_folder, "metrics.csv"), "r") as fd:
-        reader = csv.DictReader(fd)
-        for row in reader:
-            results.append(dict(row))
-        results = results[:-2]
+    try:
+        results = []
+        with open(os.path.join(experiment_folder, "metrics.csv"), "r") as fd:
+            reader = csv.DictReader(fd)
+            for row in reader:
+                results.append(dict(row))
+            results = results[:-2]
 
-    dct_results = {}
-    for line in results:
-        _ = line.pop('epoch')
-        _ = line.pop('step')
-        for key, value in line.items():
-            if key not in dct_results:
-                dct_results[key] = []
-            if value != '':
-                value = float(value)
-            dct_results[key].append(value)
-    to_pop_keys = []
-    for key, value in dct_results.items():
-        if all(x == '' for x in value):
-            to_pop_keys.append(key)
-    for key in to_pop_keys:
-        dct_results.pop(key)
-
+        dct_results = {}
+        for line in results:
+            _ = line.pop('epoch')
+            _ = line.pop('step')
+            for key, value in line.items():
+                if key not in dct_results:
+                    dct_results[key] = []
+                if value != '':
+                    value = float(value)
+                dct_results[key].append(value)
+        to_pop_keys = []
+        for key, value in dct_results.items():
+            if all(x == '' for x in value):
+                to_pop_keys.append(key)
+        for key in to_pop_keys:
+            dct_results.pop(key)
+    except Exception as e:
+        dct_results = {}
+        print(e)
     return dct_results, hyperparams, best_results
 
 def plot_curves(experiments, hyperparam_keys, title_keys, dct_results, dct_hyperparams, aggregate_prefix=['dev/', 'test/']):
