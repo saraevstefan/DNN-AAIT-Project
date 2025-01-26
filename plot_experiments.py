@@ -114,6 +114,42 @@ Experiment 14
     "train_dataset_name": ["ro-sts", "biblical_01"],
     "dev_dataset_name": ["ro-sts", "biblical_01"]
 }
+
+Experiment 15
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "train_dataset_name": "biblical_01"
+}
+
+Experiment 16
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": "ro-sts"
+}
+
+Experiment 17
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": ["ro-sts", "biblical_01"]
+}
+
+Experiment 18
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": "ro-sts",
+    "batch_size": 64
+}
 """
 
 
