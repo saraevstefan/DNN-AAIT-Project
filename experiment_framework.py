@@ -155,7 +155,7 @@ def train_model(args, model, dataloaders, hyperparameters):
 
     # Create two loggers: TensorBoard + CSV
     tb_logger = TensorBoardLogger("lightning_logs", name=None)  
-    csv_logger = CSVLogger(save_dir="lightning_logs", name="my_csv_logs")
+    csv_logger = CSVLogger(save_dir="lightning_logs", name=None)
     print(f"Running experiment with hyperparams {hyperparameters}")
 
     checkpoint_callback = ModelCheckpoint(
