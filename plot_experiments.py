@@ -160,6 +160,22 @@ Experiment 19
     "dev_dataset_name": ["ro-sts", "biblical_01"],
     "batch_size": 64
 }
+
+Experiment 20
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "training_method": "pipeline-biblical-sts"
+}
+
+Experiment 21
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "training_method": "pipeline-biblical-sts"
+}
 """
 
 
@@ -244,9 +260,24 @@ def plot_curves(experiments, hyperparam_keys, title_keys, dct_results, dct_hyper
 
 
 if __name__ == "__main__":
+    PLOT_SECOND_STEP=False
     dct_results = {}
     dct_hyperparams = {}
     dct_best_results = {}
+    
+    default_hyperparameters = dict(
+        gpus = 1,
+        batch_size = 256,
+        accumulate_grad_batches = 16,
+        lr = 2e-05,
+        model_max_length = 512,
+        max_train_epochs = 20,
+        model_name = "dumitrescustefan/bert-base-romanian-cased-v1",
+        train_dataset_name = "ro-sts",
+        dev_dataset_name = "ro-sts",
+        test_dataset_name = "ro-sts",
+        data_augmentation_translate_data = False,
+    )
 
     for dirname in os.listdir("lightning_logs"):
         results, hyperparams, best_results = read_results(
@@ -254,7 +285,7 @@ if __name__ == "__main__":
         )
         experiment_id = int(dirname.split("_")[1])
         dct_results[experiment_id] = results
-        dct_hyperparams[experiment_id] = hyperparams
+        dct_hyperparams[experiment_id] = default_hyperparameters | hyperparams
         dct_best_results[experiment_id] = best_results
 
     for key in dct_best_results[0].keys():
@@ -265,38 +296,72 @@ if __name__ == "__main__":
         print(f"Hyperparams {dct_hyperparams[idx_max]}")
         print()
 
-    print("Plotting evolution of metrics during training for all experiments with loss=MSE and no data augmentation")
-    plot_curves([0,2,4,6], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
-    # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
-    # with loss_function=MSE of desired cosine similarity and predicted cosine similarity
+    if PLOT_SECOND_STEP:
+        print("Plotting evolution of metrics during training for all experiments with loss=MSE and no data augmentation")
+        plot_curves([0,2,4,6], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
+        # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
+        # with loss_function=MSE of desired cosine similarity and predicted cosine similarity
 
 
-    print("Plotting evolution of metrics during training for all experiments with loss=AnglE and no data augmentation")
-    plot_curves([1,3,5,7], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
-    # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
-    # with loss_function=AnglE
+        print("Plotting evolution of metrics during training for all experiments with loss=AnglE and no data augmentation")
+        plot_curves([1,3,5,7], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
+        # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
+        # with loss_function=AnglE
 
-    print("Plotting evolution of metrics during training for all experiments with the same model name and no data augmentation")
-    plot_curves([0,1], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
-    plot_curves([2,3], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
-    plot_curves([4,5], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
-    plot_curves([6,7], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
-    # We observe that AnglE loss is better for the bert-uncased backbone, but worse for the RoBERT-base.
-    # AnglE loss does not impact the training, suggesting that we can get significant improvements if we focus on data
+        print("Plotting evolution of metrics during training for all experiments with the same model name and no data augmentation")
+        plot_curves([0,1], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
+        plot_curves([2,3], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
+        plot_curves([4,5], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
+        plot_curves([6,7], ['loss_function'], ['model_name'], dct_results, dct_hyperparams)
+        # We observe that AnglE loss is better for the bert-uncased backbone, but worse for the RoBERT-base.
+        # AnglE loss does not impact the training, suggesting that we can get significant improvements if we focus on data
 
-    print("Plotting evolution of metrics during training for all experiments with the same model name and loss")
-    plot_curves([2,8], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
-    plot_curves([3,9], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
-    plot_curves([6,10], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
-    plot_curves([7,11], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
-    # We observe that data augmentation greatly improves performance of the model on the dev set, regardless
-    # of the model used or the loss function used
+        print("Plotting evolution of metrics during training for all experiments with the same model name and loss")
+        plot_curves([2,8], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
+        plot_curves([3,9], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
+        plot_curves([6,10], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
+        plot_curves([7,11], ['data_augmentation_translate_data'], ['loss_function', 'model_name'], dct_results, dct_hyperparams)
+        # We observe that data augmentation greatly improves performance of the model on the dev set, regardless
+        # of the model used or the loss function used
+        
+        print("Plotting evolution of metrics during training for all experiments with the same model name and with data augmentation")
+        plot_curves([8,9], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
+        plot_curves([10,11], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
+        # We observe that with data augmentation, the AnglE loss function performs slightly better than MSE loss.
+
+        # Other than that, we believe we can achieve better performances by focusing on improving the training data.
+
+        # We plan in the next set of experiments to use the biblical dataset during training.
+
+    # 3rd step
     
-    print("Plotting evolution of metrics during training for all experiments with the same model name and with data augmentation")
-    plot_curves([8,9], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
-    plot_curves([10,11], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
-    # We observe that with data augmentation, the AnglE loss function performs slightly better than MSE loss.
+    # From this point on, we make 2 assessments: 
+    # - AnglE loss is not that good, because our problems are in the data
+    # - Live translate augmentation is not used because Google Colab does not let us do api calls to 3rd parties
 
-    # Other than that, we believe we can achieve better performances by focusing on improving the training data.
-
-    # We plan in the next set of experiments to use the biblical dataset during training.
+    # We trained some models on the biblical data, using it alone and combining it with the ro-sts data
+    # We plot how the dev metrics evolve using the same model, but different training datasets
+    print("Plotting evolution of metrics during training for all experiments with the same model name, but different training sets")
+    plot_curves([6, 12, 13], ['train_dataset_name'], ['model_name'], dct_results, dct_hyperparams)
+    plot_curves([2, 15, 16], ['train_dataset_name'], ['model_name'], dct_results, dct_hyperparams)
+    # We observe that training on the biblical set and evaluating on the ro-sts dataset produces the worst results, but combining the 
+    # two datasets outperforms training only on ro-sts
+    
+    # We also trained the models using the combination of the 2 in the dev set, experimenting if a bigger and mixed dev set would perform
+    # better in the test set
+    # TODO: add the experiment for the newer model
+    print("Plotting evolution of metrics during training for all experiments with both biblical and ro-sts, but different base models name")
+    plot_curves([14, 17], ['model_name'], ['train_dataset_name'], dct_results, dct_hyperparams)
+    
+    # We also tried to see if different batch sizes influence the training
+    print("Plotting evolution of metrics during training for experiments with different batch sizes")
+    plot_curves([13, 18], ['batch_size'], [], dct_results, dct_hyperparams)
+    
+    # TODO: table
+    # We implemented some multi-step training pipelines to maximize data usage
+    # We also introduced a new base model and a new dataset
+    # We present the following experiments:
+    # 1. Train on biblical, then finetune on ro-sts to maximize performance
+    # -----> biblical is a lot bigger, so we can take advantage to learn what STS means and then we transfer this to RO-STS
+    # 2. Train on paraphrase, then biblical, then ro-sts
+    # -----> same thing as before, but first we train for a contrastive objective to also use the data from the paraphrase set 
