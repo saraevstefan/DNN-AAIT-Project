@@ -3,5 +3,10 @@ test/pearson    0.8159
 test/spearman   0.8086
 
 
-AnglE - use this loss -- or method from this paper to train STS
+[x] experiment with smaller batch size ==> no improvement
+[] experiment with larger batch size 
+[] integrate paraphrase dataset
+[] train on bible then finetune on ro-sts
+[] train on paraphrase, then bible, then ro-sts
+[] train on `BlackKakapo/t5-base-paraphrase-ro-v2`
 

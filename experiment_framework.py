@@ -99,16 +99,24 @@ def prepare_model(args):
     return model
 
 
-def load_data(args):
-    raw_train_dataset = load_dataset(args.train_dataset_name)
-    raw_dev_dataset = load_dataset(args.dev_dataset_name)
-    raw_test_dataset = load_dataset(args.test_dataset_name)
+def _load_data(train_ds_name, dev_ds_name, test_ds_name):
+    raw_train_dataset = load_dataset(train_ds_name)
+    raw_dev_dataset = load_dataset(dev_ds_name)
+    raw_test_dataset = load_dataset(test_ds_name)
 
     train_dataset = MyDataset(data=raw_train_dataset.get_data("train"))
     dev_dataset = MyDataset(data=raw_dev_dataset.get_data("dev"))
     test_dataset = MyDataset(data=raw_test_dataset.get_data("test"))
 
     return train_dataset, dev_dataset, test_dataset
+
+
+def load_data(args):
+    return _load_data(
+        args.train_dataset_name,
+        args.dev_dataset_name,
+        args.test_dataset_name,
+    )
 
 
 def prepare_data(args, model, datasets):
@@ -150,11 +158,11 @@ def prepare_data(args, model, datasets):
     return train_dataloader, dev_dataloader, test_dataloader
 
 
-def train_model(args, model, dataloaders, hyperparameters):
+def train_model(args, model, dataloaders, hyperparameters, run_test=True):
     train_dataloader, dev_dataloader, test_dataloader = dataloaders
 
     # Create two loggers: TensorBoard + CSV
-    tb_logger = TensorBoardLogger("lightning_logs", name=None)  
+    tb_logger = TensorBoardLogger("lightning_logs", name=None)
     csv_logger = CSVLogger(save_dir="lightning_logs", name=None)
     print(f"Running experiment with hyperparams {hyperparameters}")
 
@@ -193,6 +201,10 @@ def train_model(args, model, dataloaders, hyperparameters):
             model_max_length=args.model_max_length,
         )
 
+    if not run_test:
+        # do not evaluate the model on the dev and test sets
+        return model
+
     result_dev = trainer.test(model, dev_dataloader)
     result_test = trainer.test(model, test_dataloader)
 
@@ -215,6 +227,41 @@ def train_model(args, model, dataloaders, hyperparameters):
         json.dump(result, f, indent=4, sort_keys=True)
 
     return result
+
+
+def run_experiment_multi_stage_training(experiment_config):
+    args = Configuration(**experiment_config)
+    # Step 1 - finetune the model on the unlabeled paraphrase dataset to have a starting point for sts
+    print("Start stage 1 -- contrastive train on paraphrase dataset")
+    print("TODO: implement stage 1")
+
+    # Step 2 - train on biblical_ro dataset until dev score does not change
+    print("Start stage 2 -- train STS on biblical dataset")
+
+    print("Loading model...")
+    model = prepare_model(args)
+
+    print("Loading data for Step 2")
+    datasets = _load_data("biblical_01", "biblical_01", "biblical_01")
+    dataloaders = prepare_data(args, model, datasets)
+
+    model = train_model(
+        args,
+        model,
+        dataloaders,
+        hyperparameters=experiment_config,
+        run_test=False,
+    )
+
+    # Step 3 - finetune on ro-sts until dev score does not change
+    print("Start stage 3 -- finetune STS on ro-sts dataset")
+
+    datasets = _load_data("ro-sts", "ro-sts", "ro-sts")
+    dataloaders = prepare_data(args, model, datasets)
+
+    result = train_model(args, model, dataloaders, hyperparameters=experiment_config)
+
+    pprint(result)
 
 
 def get_experiments(grid_search):
