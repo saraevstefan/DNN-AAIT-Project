@@ -1,0 +1,10 @@
+accumulate_grad_batches: 4
+batch_size: 64
+data_augmentation_translate_data: false
+dev_dataset_name: ro-sts
+loss_function: MSE
+max_train_epochs: 10
+model_name: dumitrescustefan/bert-base-romanian-uncased-v1
+train_dataset_name:
+- ro-sts
+- biblical_01
