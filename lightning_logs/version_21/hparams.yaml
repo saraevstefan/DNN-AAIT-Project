@@ -4,3 +4,4 @@ data_augmentation_translate_data: false
 loss_function: MSE
 max_train_epochs: 10
 model_name: readerbench/RoBERT-base
+training_method: pipeline-biblical-sts

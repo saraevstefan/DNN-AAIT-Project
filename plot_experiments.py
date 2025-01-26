@@ -1,8 +1,10 @@
-import os
-import yaml
-import json
 import csv
+import json
+import os
+
 import matplotlib.pyplot as plt
+import pandas as pd
+import yaml
 
 """
 Experiment 0
@@ -259,6 +261,96 @@ def plot_curves(experiments, hyperparam_keys, title_keys, dct_results, dct_hyper
     plt.show()
 
 
+def plot_table(
+    experiments,
+    hyperparam_keys,
+    title_keys,
+    dct_best_results,
+    dct_hyperparams,
+):
+    """
+    Creates a table where each row represents an experiment and each column
+    shows:
+      1) The hyperparameters of interest (hyperparam_keys).
+      2) The best values for all metrics stored in dct_best_results[exp_id].
+
+    This function ignores any logged per-epoch data and only relies on 
+    dct_best_results.
+
+    Parameters
+    ----------
+    experiments : list
+        List of experiment IDs (keys in dct_hyperparams, dct_best_results).
+    hyperparam_keys : list
+        Which hyperparameters to display in columns (e.g. ['model_name', 'lr']).
+    title_keys : list
+        Which hyperparameters to include in the table title.
+    dct_hyperparams : dict
+        A dict of hyperparameters for each experiment.
+        Example: dct_hyperparams[exp_id] = {'lr': 2e-5, 'batch_size': 16, ...}
+    dct_best_results : dict
+        A dict of dicts, where each sub-dict contains the best values 
+        for metrics of interest.
+        Example: dct_best_results[exp_id] = {
+           'loss': 0.123, 'accuracy': 0.987, ...
+        }
+    """
+
+    # 1. Collect all unique metric names from dct_best_results
+    all_metrics = set()
+    for exp_id in experiments:
+        all_metrics.update(dct_best_results[exp_id].keys())
+
+    # Sort them for a consistent column order
+    all_metrics = sorted(list(all_metrics))
+
+    # 2. Build the table columns:
+    #    First, the hyperparameters of interest, 
+    #    then each metric found in dct_best_results.
+    column_headers = list(hyperparam_keys) + all_metrics
+
+    # 3. Gather data (one row per experiment)
+    table_rows = []
+    for exp_id in experiments:
+        row_data = []
+        # (a) Collect hyperparameter values
+        for hp_key in hyperparam_keys:
+            row_data.append(dct_hyperparams[exp_id].get(hp_key, None))
+
+        # (b) Collect metric values from dct_best_results
+        for metric in all_metrics:
+            row_data.append(dct_best_results[exp_id].get(metric, None))
+
+        table_rows.append(row_data)
+
+    # 4. Create a DataFrame for nicer formatting
+    df = pd.DataFrame(table_rows, columns=column_headers, index=experiments)
+
+    # 5. Optionally, create a title for the table using the 'title_keys'
+    if title_keys:
+        title_str = ", ".join(
+            f"{key}={dct_hyperparams[experiments[0]].get(key, None)}"
+            for key in title_keys
+        )
+        print("Table for experiments with:", title_str)
+
+    # 6. Print the table
+    def make_sortable(x):
+        """
+        Convert lists to tuples, strings to single-element tuples,
+        and leave everything else as is (int, float, etc.).
+        """
+        if isinstance(x, list):
+            return tuple(x)
+        else:
+            return x
+
+    df_transformed = df.copy()
+    df_transformed = df_transformed.applymap(make_sortable)
+    
+    print(df_transformed.sort_values(by=hyperparam_keys).to_string(float_format="%.4f"))
+    print()
+
 if __name__ == "__main__":
     PLOT_SECOND_STEP=False
     dct_results = {}
@@ -277,6 +369,7 @@ if __name__ == "__main__":
         dev_dataset_name = "ro-sts",
         test_dataset_name = "ro-sts",
         data_augmentation_translate_data = False,
+        training_method = "simple-train"
     )
 
     for dirname in os.listdir("lightning_logs"):
@@ -344,6 +437,7 @@ if __name__ == "__main__":
     print("Plotting evolution of metrics during training for all experiments with the same model name, but different training sets")
     plot_curves([6, 12, 13], ['train_dataset_name'], ['model_name'], dct_results, dct_hyperparams)
     plot_curves([2, 15, 16], ['train_dataset_name'], ['model_name'], dct_results, dct_hyperparams)
+    plot_table([2,6,12,13,15,16], ['train_dataset_name', 'model_name'], [], dct_best_results, dct_hyperparams)
     # We observe that training on the biblical set and evaluating on the ro-sts dataset produces the worst results, but combining the 
     # two datasets outperforms training only on ro-sts
     
@@ -352,10 +446,13 @@ if __name__ == "__main__":
     # TODO: add the experiment for the newer model
     print("Plotting evolution of metrics during training for all experiments with both biblical and ro-sts, but different base models name")
     plot_curves([14, 17], ['model_name'], ['train_dataset_name'], dct_results, dct_hyperparams)
+    plot_table([13,16,14,17], ['model_name', 'train_dataset_name', 'dev_dataset_name'], ['train_dataset_name'], dct_best_results, dct_hyperparams)
     
     # We also tried to see if different batch sizes influence the training
     print("Plotting evolution of metrics during training for experiments with different batch sizes")
     plot_curves([13, 18], ['batch_size'], [], dct_results, dct_hyperparams)
+    plot_table([13, 18], ['batch_size'], [], dct_best_results, dct_hyperparams)
+    
     
     # TODO: table
     # We implemented some multi-step training pipelines to maximize data usage
@@ -365,3 +462,5 @@ if __name__ == "__main__":
     # -----> biblical is a lot bigger, so we can take advantage to learn what STS means and then we transfer this to RO-STS
     # 2. Train on paraphrase, then biblical, then ro-sts
     # -----> same thing as before, but first we train for a contrastive objective to also use the data from the paraphrase set 
+    print("Plotting table with metrics for different training pipelines")
+    plot_table([20, 21], ['model_name', 'training_method'], [], dct_best_results, dct_hyperparams)
