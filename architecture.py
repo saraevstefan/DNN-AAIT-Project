@@ -2,10 +2,16 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from scipy.stats import spearmanr
-from scipy.stats.stats import pearsonr
+from scipy.stats import pearsonr, spearmanr
 from torch.utils.data.dataset import Dataset
-from transformers import AutoConfig, AutoModel, AutoTokenizer
+from transformers import (
+    AutoConfig,
+    AutoModel,
+    T5ForConditionalGeneration,
+    T5Tokenizer,
+    AutoTokenizer,
+)
+
 
 class AnglELoss(nn.Module):
     """
@@ -242,11 +248,15 @@ class TransformerModel(pl.LightningModule):
         super().__init__()
         print("Loading AutoModel [{}]...".format(model_name))
         self.model_name = model_name
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.config = AutoConfig.from_pretrained(
-            model_name, num_labels=1, output_hidden_states=True
-        )
-        self.model = AutoModel.from_pretrained(model_name, config=self.config)
+        if model_name == "BlackKakapo/t5-base-paraphrase-ro-v2":
+            self.model = T5ForConditionalGeneration.from_pretrained(model_name).encoder
+            self.tokenizer = T5Tokenizer.from_pretrained(model_name)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.config = AutoConfig.from_pretrained(
+                model_name, num_labels=1, output_hidden_states=True
+            )
+            self.model = AutoModel.from_pretrained(model_name, config=self.config)
         self.dropout = nn.Dropout(0.2)
 
         self.loss_fct = self.select_loss_function(loss_function)
@@ -424,3 +434,11 @@ class MyDataset(Dataset):
 
     def __getitem__(self, i):
         return self.instances[i]  # torch.tensor([0], dtype=torch.long)
+
+
+if __name__ == "__main__":
+    model = TransformerModel("BlackKakapo/t5-base-paraphrase-ro-v2")
+
+    s1 = "Ana are niste mere"
+    inp = model.tokenizer(s1, return_tensors="pt")
+    a = 1

@@ -186,6 +186,7 @@ def train_model(args, model, dataloaders, hyperparameters, run_test=True):
         enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
         logger=[tb_logger, csv_logger],  # Use multiple loggers
+        # fast_dev_run=1,
     )
 
     trainer.logger.log_hyperparams(hyperparameters)
@@ -344,9 +345,9 @@ if __name__ == "__main__":
     # manual - to run on local
     EXPERIEMNTS = [
         {
-            "model_name": "readerbench/RoBERT-base",
-            "loss_function": "AnglE",
-            "data_augmentation_translate_data": True,
+            "model_name": "BlackKakapo/t5-base-paraphrase-ro-v2",
+            "loss_function": "MSE",
+            "data_augmentation_translate_data": False,
         },
     ]
 
