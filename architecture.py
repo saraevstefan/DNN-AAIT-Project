@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from scipy.stats import pearsonr, spearmanr
-from torch.utils.data.dataset import Dataset
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -417,23 +416,143 @@ class TransformerModel(pl.LightningModule):
         )
 
 
-class MyDataset(Dataset):
-    def __init__(self, data):
-        data_dict = data.to_dict("records")
-        self.instances = [
-            {
-                "sentence1": entry["text1"],
-                "sentence2": entry["text2"],
-                "sim": entry["score"],
-            }
-            for entry in data_dict
-        ]
+class TransformerTripletPretraining(TransformerModel):
+    """
+    A LightningModule that inherits from TransformerModel but uses
+    a triplet margin loss for pretraining on triplets:
+    (anchor, positive, negative).
+    """
 
-    def __len__(self):
-        return len(self.instances)
+    def __init__(
+        self,
+        model_name="dumitrescustefan/bert-base-romanian-cased-v1",
+        lr=2e-05,
+        model_max_length=512,
+        margin=1.0,
+        p=2,
+    ):
+        """
+        margin: float
+            Margin parameter for the TripletMarginLoss. Typically in [0, 2].
+        p: float
+            The norm degree for pairwise_distance (1 or 2 in most cases).
+        """
+        # Inherit everything from TransformerModel
+        super().__init__(
+            model_name=model_name,
+            lr=lr,
+            model_max_length=model_max_length,
+            loss_function="MSE",  # This won't be used since we override forward()
+        )
 
-    def __getitem__(self, i):
-        return self.instances[i]  # torch.tensor([0], dtype=torch.long)
+        # Define the triplet margin loss
+        self.triplet_loss = nn.TripletMarginLoss(margin=margin, p=p, reduction="mean")
+
+        # Tracking metrics
+        self.train_acc_list = []
+        self.val_acc_list = []
+        self.test_acc_list = []
+
+    def forward(self, anchor, positive, negative):
+        """
+        Each of anchor, positive, negative is a dict with 'input_ids' and 'attention_mask',
+        just like s1, s2 in your original code but for triplets.
+        """
+        # Encode anchor
+        a_out = self.model(
+            input_ids=anchor["input_ids"].to(self.device),
+            attention_mask=anchor["attention_mask"].to(self.device),
+            return_dict=True,
+        )
+        # Encode positive
+        p_out = self.model(
+            input_ids=positive["input_ids"].to(self.device),
+            attention_mask=positive["attention_mask"].to(self.device),
+            return_dict=True,
+        )
+        # Encode negative
+        n_out = self.model(
+            input_ids=negative["input_ids"].to(self.device),
+            attention_mask=negative["attention_mask"].to(self.device),
+            return_dict=True,
+        )
+
+        # Mean-pool embeddings (same as in your original code)
+        a_embed = torch.mean(a_out.last_hidden_state, dim=1)
+        p_embed = torch.mean(p_out.last_hidden_state, dim=1)
+        n_embed = torch.mean(n_out.last_hidden_state, dim=1)
+
+        # Compute triplet margin loss
+        loss = self.triplet_loss(a_embed, p_embed, n_embed)
+
+        # For logging, compute distances
+        dist_ap = F.pairwise_distance(a_embed, p_embed, p=2)
+        dist_an = F.pairwise_distance(a_embed, n_embed, p=2)
+
+        return loss, dist_ap, dist_an
+
+    def training_step(self, batch, batch_idx):
+        """
+        batch: (anchor, positive, negative)
+        Each of anchor, positive, negative is a dict of tokenized inputs.
+        """
+        anchor, positive, negative = batch
+
+        loss, dist_ap, dist_an = self(anchor, positive, negative)
+
+        # Simple accuracy: the fraction of triplets satisfying dist_ap < dist_an
+        # i.e. anchor is closer to positive than to negative
+        correct = (dist_ap < dist_an).float()
+        acc = correct.mean()
+
+        # Log to Lightning
+        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_acc", acc, prog_bar=True)
+
+        self.train_acc_list.append(acc.detach().cpu().item())
+        return loss
+
+    def on_training_epoch_end(self):
+        if len(self.train_acc_list) > 0:
+            mean_acc = sum(self.train_acc_list) / len(self.train_acc_list)
+            self.log("train/accuracy_epoch", mean_acc, prog_bar=True)
+        self.train_acc_list = []
+
+    def validation_step(self, batch, batch_idx):
+        anchor, positive, negative = batch
+        loss, dist_ap, dist_an = self(anchor, positive, negative)
+        correct = (dist_ap < dist_an).float()
+        acc = correct.mean()
+
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_acc", acc, prog_bar=True)
+
+        self.val_acc_list.append(acc.detach().cpu().item())
+        return loss
+
+    def on_validation_epoch_end(self):
+        if len(self.val_acc_list) > 0:
+            mean_acc = sum(self.val_acc_list) / len(self.val_acc_list)
+            self.log("val/accuracy_epoch", mean_acc, prog_bar=True)
+        self.val_acc_list = []
+
+    def test_step(self, batch, batch_idx):
+        anchor, positive, negative = batch
+        loss, dist_ap, dist_an = self(anchor, positive, negative)
+        correct = (dist_ap < dist_an).float()
+        acc = correct.mean()
+
+        self.log("test_loss", loss, prog_bar=True)
+        self.log("test_acc", acc, prog_bar=True)
+
+        self.test_acc_list.append(acc.detach().cpu().item())
+        return loss
+
+    def on_test_epoch_end(self):
+        if len(self.test_acc_list) > 0:
+            mean_acc = sum(self.test_acc_list) / len(self.test_acc_list)
+            self.log("test/accuracy_epoch", mean_acc, prog_bar=True)
+        self.test_acc_list = []
 
 
 if __name__ == "__main__":

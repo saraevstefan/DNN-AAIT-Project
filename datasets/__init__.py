@@ -1,5 +1,6 @@
-from .dataset import DatasetAggregator
+from .dataset import DatasetAggregator, STSDataset, SimilarityDataset
 from .read_biblical_01_dataset import Biblical_01_Dataset
+from .read_paraphrase_ro_dataset import Paraphrase_RO_Dataset
 from .read_ro_sts_dataset import RO_STS_Dataset
 
 
@@ -12,6 +13,8 @@ def load_dataset(dataset_name):
         return RO_STS_Dataset("datasets/RO-STS")
     if dataset_name == "biblical_01":
         return Biblical_01_Dataset("datasets/Biblical_01")
+    if dataset_name == "paraphrase-ro":
+        return Paraphrase_RO_Dataset("datasets/Paraphrase-RO")
 
     raise ValueError(f"Unknown dataset {dataset_name}")
 
