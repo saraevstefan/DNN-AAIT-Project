@@ -150,6 +150,16 @@ Experiment 18
     "dev_dataset_name": "ro-sts",
     "batch_size": 64
 }
+
+Experiment 19
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": ["ro-sts", "biblical_01"],
+    "batch_size": 64
+}
 """
 
 
