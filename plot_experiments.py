@@ -178,6 +178,75 @@ Experiment 21
     "model_name": "readerbench/RoBERT-base",
     "training_method": "pipeline-biblical-sts"
 }
+
+Experiment 22
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "train_dataset_name": ["ro-sts", "biblical_01"],
+    "dev_dataset_name": "ro-sts",
+    "batch_size": 512
+}
+
+Experiment 23
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "readerbench/RoBERT-base",
+    "training_method": "pipeline-paraphrase-biblical-sts"
+}
+
+Experiment 24
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "training_method": "pipeline-paraphrase-biblical-sts"
+}
+
+Experiment 25
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "BlackKakapo/t5-base-paraphrase-ro-v2",
+}
+
+Experiment 26
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "training_method": "pipeline-paraphrase-biblical-sts",
+    "lr": 1e-5
+}
+
+Experiment 27
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "training_method": "pipeline-paraphrase-biblical-sts",
+    "max_train_epochs": 2
+}
+
+Experiment 28
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "data_augmentation_negative_samples": True
+}
+
+Experiment 29
+{
+    "data_augmentation_translate_data": false,
+    "loss_function": "MSE",
+    "model_name": "dumitrescustefan/bert-base-romanian-uncased-v1",
+    "training_method": "pipeline-paraphrase-biblical-sts",
+    "max_train_epochs": 2,
+    "data_augmentation_negative_samples": True
+}
 """
 
 
@@ -352,7 +421,7 @@ def plot_table(
     print()
 
 if __name__ == "__main__":
-    PLOT_SECOND_STEP=False
+    PLOT_SECOND_STEP=True
     dct_results = {}
     dct_hyperparams = {}
     dct_best_results = {}
@@ -391,7 +460,7 @@ if __name__ == "__main__":
 
     if PLOT_SECOND_STEP:
         print("Plotting evolution of metrics during training for all experiments with loss=MSE and no data augmentation")
-        plot_curves([0,2,4,6], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
+        plot_curves([0,2,4,6,25], ['model_name'], ['loss_function'], dct_results, dct_hyperparams)
         # We observe that the most recent pretrained model (RoBERT-base) achieves the best scores
         # with loss_function=MSE of desired cosine similarity and predicted cosine similarity
 
@@ -422,6 +491,9 @@ if __name__ == "__main__":
         plot_curves([10,11], ['loss_function'], ['data_augmentation_translate_data', 'model_name'], dct_results, dct_hyperparams)
         # We observe that with data augmentation, the AnglE loss function performs slightly better than MSE loss.
 
+        print("Plotting table with all results of Step 2")
+        plot_table([0,1,2,3,4,5,6,7,8,9,10,11], ['model_name', 'loss_function', 'data_augmentation_translate_data'], [], dct_best_results, dct_hyperparams)
+
         # Other than that, we believe we can achieve better performances by focusing on improving the training data.
 
         # We plan in the next set of experiments to use the biblical dataset during training.
@@ -450,8 +522,8 @@ if __name__ == "__main__":
     
     # We also tried to see if different batch sizes influence the training
     print("Plotting evolution of metrics during training for experiments with different batch sizes")
-    plot_curves([13, 18], ['batch_size'], [], dct_results, dct_hyperparams)
-    plot_table([13, 18], ['batch_size'], [], dct_best_results, dct_hyperparams)
+    plot_curves([13, 18, 22], ['batch_size'], [], dct_results, dct_hyperparams)
+    plot_table([13, 18, 22], ['batch_size'], [], dct_best_results, dct_hyperparams)
     
     
     # TODO: table
@@ -463,4 +535,7 @@ if __name__ == "__main__":
     # 2. Train on paraphrase, then biblical, then ro-sts
     # -----> same thing as before, but first we train for a contrastive objective to also use the data from the paraphrase set 
     print("Plotting table with metrics for different training pipelines")
-    plot_table([20, 21], ['model_name', 'training_method'], [], dct_best_results, dct_hyperparams)
+    plot_table([20, 21, 23, 24, 26, 27, 29], ['model_name', 'training_method'], [], dct_best_results, dct_hyperparams)
+
+    print("Plotting table with all experiments results")
+    plot_table([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,19,20,21,23,24,25,26,27,28,29], ['model_name', 'training_method', 'train_dataset_name', 'dev_dataset_name'], [], dct_best_results, dct_hyperparams)

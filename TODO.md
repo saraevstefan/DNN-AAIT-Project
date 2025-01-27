@@ -9,7 +9,8 @@ test/spearman   0.8086,	0.8075
 [x] rerun experiment 13
 [x] train on bible then finetune on ro-sts
 [x] rerun experiment 12
-[] experiment with larger batch size 
-[] train on paraphrase, then bible, then ro-sts
-[] train on `BlackKakapo/t5-base-paraphrase-ro-v2`
-
+[x] experiment with larger batch size 
+[x] train on `BlackKakapo/t5-base-paraphrase-ro-v2`
+[x] train on paraphrase, then bible, then ro-sts
+[x] train with small epochs -- surpass baseline
+[x] train with negative signals

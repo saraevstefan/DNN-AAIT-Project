@@ -269,7 +269,7 @@ def train_model(args, model, dataloaders, hyperparameters, run_test=True):
         enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
         logger=[tb_logger, csv_logger],  # Use multiple loggers
-        fast_dev_run=1,
+        # fast_dev_run=1,
     )
 
     trainer.logger.log_hyperparams(hyperparameters)
@@ -398,6 +398,7 @@ def run_experiment_multi_stage_training(experiment_config):
     datasets = _load_data("ro-sts", "ro-sts", "ro-sts")
     dataloaders = prepare_data(args, model, datasets)
 
+    args.max_train_epochs = 4
     result = train_model(args, model, dataloaders, hyperparameters=experiment_config)
 
     pprint(result)
