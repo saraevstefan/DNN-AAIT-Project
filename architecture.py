@@ -314,7 +314,7 @@ class TransformerModel(pl.LightningModule):
             "Could not detect SEP/EOS/BOS/CLS tokens, and thus could not assign a PAD token which is required."
         )
 
-    def forward(self, s1, s2, sim):
+    def forward(self, s1, s2, s3, sim):
         o1 = self.model(
             input_ids=s1["input_ids"].to(self.device),
             attention_mask=s1["attention_mask"].to(self.device),
@@ -325,6 +325,11 @@ class TransformerModel(pl.LightningModule):
             attention_mask=s2["attention_mask"].to(self.device),
             return_dict=True,
         )
+        o3 = self.model(
+            input_ids=s3["input_ids"].to(self.device),
+            attention_mask=s3["attention_mask"].to(self.device),
+            return_dict=True,
+        )
         pooled_sentence1 = o1.last_hidden_state  # [batch_size, seq_len, hidden_size]
         pooled_sentence1 = torch.mean(
             pooled_sentence1, dim=1
@@ -333,15 +338,24 @@ class TransformerModel(pl.LightningModule):
         pooled_sentence2 = torch.mean(
             pooled_sentence2, dim=1
         )  # [batch_size, hidden_size]
+        pooled_sentence3 = o3.last_hidden_state  # [batch_size, seq_len, hidden_size]
+        pooled_sentence3 = torch.mean(
+            pooled_sentence3, dim=1
+        )  # [batch_size, hidden_size]
 
-        cosines = self.cos(pooled_sentence1, pooled_sentence2).squeeze()  # [batch_size]
-        loss = self.loss_fct(pooled_sentence1, pooled_sentence2, cosines, sim)
-        return loss, cosines
+
+        cosines_similar = self.cos(pooled_sentence1, pooled_sentence2).squeeze()  # [batch_size]
+        loss_similar = self.loss_fct(pooled_sentence1, pooled_sentence2, cosines_similar, sim)
+        
+        cosines_dissimilar = self.cos(pooled_sentence1, pooled_sentence3).squeeze()  # [batch_size]
+        loss_dissimilar = self.loss_fct(pooled_sentence1, pooled_sentence2, cosines_dissimilar, torch.zeros_like(cosines_dissimilar).to(self.device))
+        
+        return loss_similar + loss_dissimilar, cosines_similar
 
     def training_step(self, batch, batch_idx):
-        s1, s2, sim = batch
+        s1, s2, s3, sim = batch
 
-        loss, predicted_sims = self(s1, s2, sim)
+        loss, predicted_sims = self(s1, s2, s3, sim)
 
         self.train_y_hat.extend(predicted_sims.detach().cpu().view(-1).numpy())
         self.train_y.extend(sim.detach().cpu().view(-1).numpy())
@@ -363,9 +377,9 @@ class TransformerModel(pl.LightningModule):
         self.train_loss = []
 
     def validation_step(self, batch, batch_idx):
-        s1, s2, sim = batch
+        s1, s2, s3, sim = batch
 
-        loss, predicted_sims = self(s1, s2, sim)
+        loss, predicted_sims = self(s1, s2, s3, sim)
 
         self.dev_y_hat.extend(predicted_sims.detach().cpu().view(-1).numpy())
         self.dev_y.extend(sim.detach().cpu().view(-1).numpy())
@@ -387,9 +401,9 @@ class TransformerModel(pl.LightningModule):
         self.dev_loss = []
 
     def test_step(self, batch, batch_idx):
-        s1, s2, sim = batch
+        s1, s2, s3, sim = batch
 
-        loss, predicted_sims = self(s1, s2, sim)
+        loss, predicted_sims = self(s1, s2, s3, sim)
 
         self.test_y_hat.extend(predicted_sims.detach().cpu().view(-1).numpy())
         self.test_y.extend(sim.detach().cpu().view(-1).numpy())

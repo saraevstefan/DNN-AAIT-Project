@@ -55,18 +55,23 @@ def sts_collate(model, batch, translate=False):
     """
     sentence1_batch = []
     sentence2_batch = []
+    sentence3_batch = []
     sims = []
     for instance in batch:
         # print(instance["sentence1"])
         sentence1_batch.append(instance["sentence1"])
         sentence2_batch.append(instance["sentence2"])
+        sentence3_batch.append(instance["sentence3"])
         sims.append(instance["sim"])
 
     if translate:
-        if random.random() < 0.5:
+        rnd = random.random()
+        if rnd < 0.3:
             sentence1_batch = translate_to_random_language_and_back(sentence1_batch)
-        else:
+        elif rnd < 0.7:
             sentence2_batch = translate_to_random_language_and_back(sentence2_batch)
+        else:
+            sentence3_batch = translate_to_random_language_and_back(sentence3_batch)
 
     sentence1_batch = model.tokenizer(
         sentence1_batch,
@@ -82,9 +87,16 @@ def sts_collate(model, batch, translate=False):
         truncation=True,
         return_tensors="pt",
     )
+    sentence3_batch = model.tokenizer(
+        sentence3_batch,
+        padding=True,
+        max_length=model.model_max_length,
+        truncation=True,
+        return_tensors="pt",
+    )
     sims = torch.tensor(sims, dtype=torch.float)
 
-    return sentence1_batch, sentence2_batch, sims
+    return sentence1_batch, sentence2_batch, sentence3_batch, sims
 
 
 def triplet_collate(model, batch, translate=False):
@@ -257,7 +269,7 @@ def train_model(args, model, dataloaders, hyperparameters, run_test=True):
         enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
         logger=[tb_logger, csv_logger],  # Use multiple loggers
-        # fast_dev_run=1,
+        fast_dev_run=1,
     )
 
     trainer.logger.log_hyperparams(hyperparameters)
@@ -329,7 +341,7 @@ def pretrain_model(args, model, dataloaders, hyperparameters):
         enable_checkpointing=True,
         max_epochs=args.max_train_epochs,
         logger=[tb_logger, csv_logger],  # Use multiple loggers
-        # fast_dev_run=1,
+        fast_dev_run=1,
     )
 
     trainer.fit(model, train_dataloader, dev_dataloader)
@@ -349,22 +361,21 @@ def pretrain_model(args, model, dataloaders, hyperparameters):
 def run_experiment_multi_stage_training(experiment_config):
     args = Configuration(**experiment_config)
     # Step 1 - finetune the model on the unlabeled paraphrase dataset to have a starting point for sts
-    print("Start stage 1 -- contrastive train on paraphrase dataset")
-    print("TODO: implement stage 1")
-    model = prepare_model(args, TransformerTripletPretraining)
+    # print("Start stage 1 -- contrastive train on paraphrase dataset")
+    # model = prepare_model(args, TransformerTripletPretraining)
 
-    datasets = _load_data_pretrain("paraphrase-ro", "paraphrase-ro")
-    dataloaders = prepare_data(args, model, datasets, collate=triplet_collate)
+    # datasets = _load_data_pretrain("paraphrase-ro", "paraphrase-ro")
+    # dataloaders = prepare_data(args, model, datasets, collate=triplet_collate)
     
-    pretrained_model = pretrain_model(
-        args,
-        model,
-        dataloaders,
-        hyperparameters=experiment_config,
-    )
+    # pretrained_model = pretrain_model(
+    #     args,
+    #     model,
+    #     dataloaders,
+    #     hyperparameters=experiment_config,
+    # )
 
     model = prepare_model(args)
-    model.model = pretrained_model.model # this should change the weights
+    # model.model = pretrained_model.model # this should change the weights
 
     # Step 2 - train on biblical_ro dataset until dev score does not change
     print("Start stage 2 -- train STS on biblical dataset")

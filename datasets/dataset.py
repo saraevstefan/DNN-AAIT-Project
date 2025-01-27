@@ -78,10 +78,17 @@ class STSDataset(Dataset):
             {
                 "sentence1": entry["text1"],
                 "sentence2": entry["text2"],
+                "sentence3": None,
                 "sim": entry["score"],
             }
             for entry in data_dict
         ]
+        # generate random order of indexes
+        np.random.seed(42)
+        rnd_indices = np.random.permutation(len(self.instances))
+        for entry, idx in zip(self.instances, rnd_indices):
+            rnd_prop = np.random.randint(1, 3)
+            entry["sentence3"] = self.instances[idx][f"sentence{rnd_prop}"]
 
     def __len__(self):
         return len(self.instances)
