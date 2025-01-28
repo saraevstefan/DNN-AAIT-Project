@@ -348,7 +348,7 @@ class TransformerModel(pl.LightningModule):
         loss_similar = self.loss_fct(pooled_sentence1, pooled_sentence2, cosines_similar, sim)
         
         cosines_dissimilar = self.cos(pooled_sentence1, pooled_sentence3).squeeze()  # [batch_size]
-        loss_dissimilar = self.loss_fct(pooled_sentence1, pooled_sentence2, cosines_dissimilar, torch.zeros_like(cosines_dissimilar).to(self.device))
+        loss_dissimilar = self.loss_fct(pooled_sentence1, pooled_sentence3, cosines_dissimilar, torch.zeros_like(cosines_dissimilar).to(self.device))
         
         return loss_similar + loss_dissimilar, cosines_similar
 
