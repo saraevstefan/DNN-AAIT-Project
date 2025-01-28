@@ -256,7 +256,7 @@ class TransformerModel(pl.LightningModule):
                 model_name, num_labels=1, output_hidden_states=True
             )
             self.model = AutoModel.from_pretrained(model_name, config=self.config)
-        self.dropout = nn.Dropout(0.2)
+        self.readout = nn.Linear(768, 512)
 
         self.loss_fct = self.select_loss_function(loss_function)
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
@@ -331,17 +331,17 @@ class TransformerModel(pl.LightningModule):
             return_dict=True,
         )
         pooled_sentence1 = o1.last_hidden_state  # [batch_size, seq_len, hidden_size]
-        pooled_sentence1 = torch.mean(
+        pooled_sentence1 = self.readout(torch.mean(
             pooled_sentence1, dim=1
-        )  # [batch_size, hidden_size]
+        ))  # [batch_size, hidden_size]
         pooled_sentence2 = o2.last_hidden_state  # [batch_size, seq_len, hidden_size]
-        pooled_sentence2 = torch.mean(
+        pooled_sentence2 = self.readout(torch.mean(
             pooled_sentence2, dim=1
-        )  # [batch_size, hidden_size]
+        ))  # [batch_size, hidden_size]
         pooled_sentence3 = o3.last_hidden_state  # [batch_size, seq_len, hidden_size]
-        pooled_sentence3 = torch.mean(
+        pooled_sentence3 = self.readout(torch.mean(
             pooled_sentence3, dim=1
-        )  # [batch_size, hidden_size]
+        ))  # [batch_size, hidden_size]
 
 
         cosines_similar = self.cos(pooled_sentence1, pooled_sentence2).squeeze()  # [batch_size]
